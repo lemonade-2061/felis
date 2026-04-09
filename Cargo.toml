@@ -1,0 +1,25 @@
+[workspace]
+members = [
+    "crates/felis-core",
+    "crates/felis-compositor",
+    "crates/felis-desktop",
+    "crates/felis-bar",
+    "crates/felis-launcher",
+    "crates/felis-settings",
+    "crates/felis-files",
+    "crates/felis-store",
+    "crates/felish",
+    "studio/felis-photo",
+    "studio/felis-vector",
+    "studio/felis-paint",
+    "studio/felis-cut",
+    "studio/felis-motion",
+]
+resolver = "2"
+
+[workspace.dependencies]
+iced   = { version = "0.14.0", features = ["image", "canvas"] }
+zbus   = "5"
+serde  = { version = "1", features = ["derive"] }
+tokio  = { version = "1", features = ["full"] }
+dirs   = "5"
