@@ -35,6 +35,7 @@ EndeavorOSみたいなポジションのやつ
 
 ## 問題
 - NixとFlatpakの共存
+- NvidiaGPU,IntelGPUの最適化(もってないから)
 
 ---
 | コンポーネント | 言語 |
