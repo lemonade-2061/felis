@@ -22,6 +22,8 @@ use smithay::{
     },
 };
 
+use crate::CalloopData;
+
 pub struct Felis {
     pub start_time: std::time::Instant,
     pub socket_name: OsString,
@@ -42,7 +44,7 @@ pub struct Felis {
 }
 
 impl Felis {
-    pub fn new(event_loop: &mut EventLoop<Self>, display: Display<Self>) -> Self {
+    pub fn new(event_loop: &mut EventLoop<CalloopData>, display: Display<Self>) -> Self {
         let start_time = std::time::Instant::now();
 
         let dh = display.handle();
@@ -71,8 +73,9 @@ impl Felis {
         Self {
             start_time,
             display_handle: dh,
+            loop_signal,
             socket_name,
-
+            space,
             compositor_state,
             xdg_shell_state,
             shm_state,
@@ -86,7 +89,7 @@ impl Felis {
 
     fn init_wayland_listener(
         display: Display<Felis>,
-        event_loop: &mut EventLoop<Self>,
+        event_loop: &mut EventLoop<CalloopData>,
     ) -> OsString {
         let listening_socket = ListeningSocketSource::new_auto().unwrap();
         let socket_name = listening_socket.socket_name().to_os_string();
@@ -106,7 +109,10 @@ impl Felis {
                 Generic::new(display, Interest::READ, Mode::Level),
                 |_, display, state| {
                     unsafe {
-                        display.get_mut().dispatch_clients(state).unwrap();
+                        display
+                            .get_mut()
+                            .dispatch_clients(&mut state.state)
+                            .unwrap();
                     }
                     Ok(PostAction::Continue)
                 },

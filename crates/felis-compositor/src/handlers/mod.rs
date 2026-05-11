@@ -3,21 +3,16 @@ mod xdg_shell;
 
 use crate::Felis;
 
-//
-// Wl Seat
-//
-
-use smithay::input::dnd::{DnDGrab, DndGrabHandler, GrabType, Source};
-use smithay::input::pointer::Focus;
 use smithay::input::{Seat, SeatHandler, SeatState};
 use smithay::reexports::wayland_server::Resource;
 use smithay::reexports::wayland_server::protocol::wl_surface::WlSurface;
-use smithay::utils::Serial;
 use smithay::wayland::output::OutputHandler;
 use smithay::wayland::selection::SelectionHandler;
 use smithay::wayland::selection::data_device::{
-    DataDeviceHandler, DataDeviceState, WaylandDndGrabHandler, set_data_device_focus,
+    ClientDndGrabHandler, DataDeviceHandler, DataDeviceState, ServerDndGrabHandler,
+    set_data_device_focus,
 };
+use smithay::{delegate_data_device, delegate_output, delegate_seat};
 
 impl SeatHandler for Felis {
     type KeyboardFocus = WlSurface;
@@ -42,51 +37,22 @@ impl SeatHandler for Felis {
     }
 }
 
-//
-// Wl Data Device
-//
-
+delegate_seat!(Felis);
 impl SelectionHandler for Felis {
     type SelectionUserData = ();
 }
 
 impl DataDeviceHandler for Felis {
-    fn data_device_state(&mut self) -> &mut DataDeviceState {
-        &mut self.data_device_state
+    fn data_device_state(&self) -> &DataDeviceState {
+        &self.data_device_state
     }
 }
 
-impl DndGrabHandler for Felis {}
-impl WaylandDndGrabHandler for Felis {
-    fn dnd_requested<S: Source>(
-        &mut self,
-        source: S,
-        _icon: Option<WlSurface>,
-        seat: Seat<Self>,
-        serial: Serial,
-        type_: GrabType,
-    ) {
-        match type_ {
-            GrabType::Pointer => {
-                let ptr = seat.get_pointer().unwrap();
-                let start_data = ptr.grab_start_data().unwrap();
+impl ClientDndGrabHandler for Felis {}
+impl ServerDndGrabHandler for Felis {}
 
-                // create a dnd grab to start the operation
-                let grab = DnDGrab::new_pointer(&self.display_handle, start_data, source, seat);
-                ptr.set_grab(self, grab, serial, Focus::Keep);
-            }
-            GrabType::Touch => {
-                // smallvil lacks touch handling
-                source.cancel();
-            }
-        }
-    }
-}
-
-//
-// Wl Output & Xdg Output
-//
+delegate_data_device!(Felis);
 
 impl OutputHandler for Felis {}
 
-smithay::delegate_dispatch2!(Felis);
+delegate_output!(Felis);
