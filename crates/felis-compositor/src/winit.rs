@@ -13,12 +13,14 @@ use smithay::{
     utils::{Rectangle, Transform},
 };
 
-use crate::Felis;
+use crate::{CalloopData, Felis};
 
 pub fn init_winit(
-    event_loop: &mut EventLoop<Felis>,
-    state: &mut Felis,
+    event_loop: &mut EventLoop<CalloopData>,
+    data: &mut CalloopData,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let display_handle = &mut data.display_handle;
+    let state = &mut data.state;
     let (mut backend, winit) = winit::init()?;
 
     let mode = Mode {
@@ -36,7 +38,7 @@ pub fn init_winit(
         },
     );
 
-    let _global = output.create_global::<Felis>(&state.display_handle);
+    let _global = output.create_global::<Felis>(display_handle);
     output.change_current_state(
         Some(mode),
         Some(Transform::Flipped180),
@@ -49,9 +51,15 @@ pub fn init_winit(
 
     let mut damage_tracker = OutputDamageTracker::from_output(&output);
 
+    unsafe {
+        std::env::set_var("WAYLAND_DISPLAY", &state.socket_name);
+    }
+
     event_loop
         .handle()
-        .insert_source(winit, move |event, _, state| {
+        .insert_source(winit, move |event, _, data| {
+            let state = &mut data.state;
+
             match event {
                 WinitEvent::Resized { size, .. } => {
                     output.change_current_state(
