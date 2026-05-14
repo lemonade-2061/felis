@@ -51,12 +51,13 @@ pub fn init_winit(
 
     let mut damage_tracker = OutputDamageTracker::from_output(&output);
 
-    std::env::set_var("WAYLAND_DISPLAY", &state.socket_name);
+    unsafe {
+        std::env::set_var("WAYLAND_DISPLAY", &state.socket_name);
+    }
 
     event_loop
         .handle()
         .insert_source(winit, move |event, _, data| {
-            let display = &mut data.display_handle;
             let state = &mut data.state;
 
             match event {
