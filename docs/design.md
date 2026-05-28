@@ -26,7 +26,7 @@ EndeavorOSみたいなポジションのやつ
 - kitty
 
 ### CLIツール
-- Go
+- Zig または Rust（未確定。旧方針はGo）
 
 ## ベース
 - NixOS上のDE
@@ -42,6 +42,6 @@ EndeavorOSみたいなポジションのやつ
 | --- | --- |
 | コンポジター | Rust |
 | バー | Zig(予定) |
-| CLIツール | Go |
+| CLIツール | Zig or Rust（未確定） |
 | ランチャーGUI | TS(AGS) |
 | 環境管理 | Nix |
