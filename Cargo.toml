@@ -1,20 +1,5 @@
 [workspace]
-members = [
-    "crates/felis-core",
-    "crates/felis-compositor",
-    "crates/felis-desktop",
-    "crates/felis-bar",
-    "crates/felis-launcher",
-    "crates/felis-settings",
-    "crates/felis-files",
-    "crates/felis-store",
-    "crates/felish",
-    "studio/felis-photo",
-    "studio/felis-vector",
-    "studio/felis-paint",
-    "studio/felis-cut",
-    "studio/felis-motion",
-]
+members = ["crates/felis-compositor"]
 resolver = "2"
 
 [workspace.dependencies]
