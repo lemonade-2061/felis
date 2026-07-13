@@ -1,5 +1,5 @@
 use crate::layout::{Direction, WindowNav};
-use smithay::desktop::Window;
+use smithay::{desktop::Window, utils::Rectangle};
 
 type NodeId = usize;
 
@@ -56,6 +56,27 @@ impl BspLayout {
                 self.nodes.push(Some(node));
                 self.nodes.len() - 1
             }
+        }
+    }
+    pub fn layout(&self, area: Rectangle<i32, Logical>) -> Vec<(Window, Rectangle<i32, logical>)> {
+        let mut out = Vec::new();
+        if let Some(root) = self.root {
+            self.geometry(root, area, &mut out)
+        }
+        out
+    }
+
+    fn geometry(
+        &self,
+        node: NodeId,
+        rect: Rectangle<i32, logical>,
+        out: &mut Vec<(Window, Rectangle<i32, logical>)>,
+    ) {
+        match &self.nodes[node] {
+            Some(BspNode {
+                kind: NodeKind::Leaf {window}
+                
+            })
         }
     }
 }

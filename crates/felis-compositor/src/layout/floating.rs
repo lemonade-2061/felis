@@ -15,6 +15,11 @@ impl FloatingLayout {
 }
 
 impl WindowNav for FloatingLayout {
+    fn add(&mut self, window: Window) {
+        self.windows.push(window);
+        self.focused = Some(self.windows.len() - 1);
+    }
+
     fn focus(&mut self, dir: Direction) -> Option<Window> {
         let cur = self.focused?;
 
@@ -30,9 +35,11 @@ impl WindowNav for FloatingLayout {
         self.focused = Some(next);
         Some(self.windows[next].clone())
     }
+
     fn move_window(&mut self, _dir: super::Direction) -> bool {
         false
     }
+
     fn resize(&mut self, _dir: super::Direction, _delta: i32) -> bool {
         false
     }
