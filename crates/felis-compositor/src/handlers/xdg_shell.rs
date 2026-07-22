@@ -1,17 +1,17 @@
 use smithay::{
     delegate_xdg_shell,
     desktop::{
-        PopupKind, PopupManager, Space, Window, find_popup_root_surface, get_popup_toplevel_coords,
+        find_popup_root_surface, get_popup_toplevel_coords, PopupKind, PopupManager, Space, Window,
     },
     input::{
-        Seat,
         pointer::{Focus, GrabStartData as PointerGrabStartData},
+        Seat,
     },
     reexports::{
         wayland_protocols::xdg::shell::server::xdg_toplevel,
         wayland_server::{
-            Resource,
             protocol::{wl_seat, wl_surface::WlSurface},
+            Resource,
         },
     },
     utils::{Rectangle, Serial},
@@ -25,8 +25,8 @@ use smithay::{
 };
 
 use crate::{
-    Felis,
     grabs::{MoveSurfaceGrab, ResizeSurfaceGrab},
+    Felis,
 };
 
 impl XdgShellHandler for Felis {

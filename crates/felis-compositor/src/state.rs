@@ -4,11 +4,11 @@ use smithay::{
     desktop::{PopupManager, Space, Window, WindowSurfaceType},
     input::{Seat, SeatState},
     reexports::{
-        calloop::{EventLoop, Interest, LoopSignal, Mode, PostAction, generic::Generic},
+        calloop::{generic::Generic, EventLoop, Interest, LoopSignal, Mode, PostAction},
         wayland_server::{
-            Display, DisplayHandle,
             backend::{ClientData, ClientId, DisconnectReason},
             protocol::wl_surface::WlSurface,
+            Display, DisplayHandle,
         },
     },
     utils::{Logical, Point},
