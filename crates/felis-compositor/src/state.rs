@@ -24,7 +24,9 @@ use smithay::{
 
 use crate::CalloopData;
 
-use crate::layout::{bsp::BspLayout, WindowNav};
+use crate::workspace::Workspace;
+
+use crate::layout::bsp::BspLayout;
 
 pub struct Felis {
     pub start_time: std::time::Instant,
@@ -32,7 +34,7 @@ pub struct Felis {
     pub display_handle: DisplayHandle,
 
     pub space: Space<Window>,
-    pub layout: BspLayout,
+    pub workspace: Workspace,
     pub loop_signal: LoopSignal,
 
     pub compositor_state: CompositorState,
@@ -87,7 +89,7 @@ impl Felis {
             data_device_state,
             popups,
             seat,
-            layout: BspLayout::new(),
+            workspace: Workspace::new(),
         }
     }
 
@@ -146,7 +148,11 @@ impl Felis {
             return;
         };
 
-        for (window, rect) in self.layout.layout(area) {
+        for window in self.workspace.floating_windows() {
+            let loc = self.space.element_location(&window).unwrap_or_default();
+            self.space.map_element(window, loc, false);
+        }
+        for (window, rect) in self.workspace.layout(area) {
             let toplevel = window.toplevel().unwrap();
             toplevel.with_pending_state(|state| {
                 state.size = Some(rect.size);

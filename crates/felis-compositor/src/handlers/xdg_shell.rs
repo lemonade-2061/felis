@@ -37,7 +37,7 @@ impl XdgShellHandler for Felis {
 
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
         let window = Window::new_wayland_window(surface);
-        self.layout.add(window);
+        self.workspace.add_tiled(window);
         self.arrange();
     }
 
@@ -138,7 +138,7 @@ impl XdgShellHandler for Felis {
             .cloned();
 
         if let Some(window) = window {
-            self.layout.remove(&window);
+            self.workspace.remove(&window);
             self.space.unmap_elem(&window);
         }
 
