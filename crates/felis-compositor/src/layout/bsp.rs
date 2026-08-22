@@ -88,7 +88,7 @@ impl BspLayout {
             }) => {
                 let (r1, r2) = match axis {
                     Axis::Horizontal => {
-                        let w1 = (rect.size.w as f32 * ratio) as i32;
+                        let w1 = ((rect.size.w as f32 * ratio) as i32).clamp(1, rect.size.w - 1);
                         (
                             Rectangle::new(rect.loc, (w1, rect.size.h).into()),
                             Rectangle::new(
@@ -98,7 +98,7 @@ impl BspLayout {
                         )
                     }
                     Axis::Vertical => {
-                        let h1 = (rect.size.h as f32 * ratio) as i32;
+                        let h1 = ((rect.size.h as f32 * ratio) as i32).clamp(1, rect.size.h - 1);
                         (
                             Rectangle::new(rect.loc, (rect.size.w, h1).into()),
                             Rectangle::new(
@@ -182,11 +182,22 @@ impl WindowNav for BspLayout {
                     _ => unreachable!("focusedは葉のはず"),
                 };
 
+                let axis = match self.nodes[target].as_ref().unwrap().parent {
+                    None => Axis::Horizontal,
+                    Some(p) => match &self.nodes[p].as_ref().unwrap().kind {
+                        NodeKind::Split {
+                            axis: Axis::Horizontal,
+                            ..
+                        } => Axis::Vertical,
+                        _ => Axis::Horizontal,
+                    },
+                };
+
                 let old_leaf = self.alloc(NodeKind::Leaf { window });
                 let node = self.nodes[target].as_mut().unwrap();
 
                 node.kind = NodeKind::Split {
-                    axis: Axis::Horizontal,
+                    axis,
                     ratio: 0.5,
                     first: old_leaf,
                     second: new_leaf,
