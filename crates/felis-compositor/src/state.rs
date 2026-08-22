@@ -24,12 +24,15 @@ use smithay::{
 
 use crate::CalloopData;
 
+use crate::layout::{bsp::BspLayout, WindowNav};
+
 pub struct Felis {
     pub start_time: std::time::Instant,
     pub socket_name: OsString,
     pub display_handle: DisplayHandle,
 
     pub space: Space<Window>,
+    pub layout: BspLayout,
     pub loop_signal: LoopSignal,
 
     pub compositor_state: CompositorState,
@@ -84,6 +87,7 @@ impl Felis {
             data_device_state,
             popups,
             seat,
+            layout: BspLayout::new(),
         }
     }
 
@@ -132,6 +136,24 @@ impl Felis {
                     .surface_under(pos - location.to_f64(), WindowSurfaceType::ALL)
                     .map(|(s, p)| (s, (p + location).to_f64()))
             })
+    }
+
+    pub fn arrange(&mut self) {
+        let Some(output) = self.space.outputs().next().cloned() else {
+            return;
+        };
+        let Some(area) = self.space.output_geometry(&output) else {
+            return;
+        };
+
+        for (window, rect) in self.layout.layout(area) {
+            let toplevel = window.toplevel().unwrap();
+            toplevel.with_pending_state(|state| {
+                state.size = Some(rect.size);
+            });
+            toplevel.send_pending_configure();
+            self.space.map_element(window, rect.loc, false);
+        }   
     }
 }
 

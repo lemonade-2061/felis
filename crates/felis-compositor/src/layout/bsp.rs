@@ -116,6 +116,35 @@ impl BspLayout {
         }
     }
 
+    fn free(&mut self, id: NodeId) {
+        self.nodes[id] = None;
+        self.free_list.push(id);
+    }
+
+    fn find_leaf(&self, window: &Window) -> Option<NodeId> {
+        self.nodes.iter().position(|slot| {
+            matches!(
+                slot,
+                Some(BspNode {
+                    kind: NodeKind::Leaf { window: w },
+                    ..
+                }) if w == window
+            )
+        })
+    }
+
+    fn first_leaf(&self, mut id: NodeId) -> NodeId {
+        loop {
+            match &self.nodes[id] {
+                Some(BspNode {
+                    kind: NodeKind::Split { first, .. },
+                    ..
+                }) => id = *first,
+                _ => return id,
+            }
+        }
+    }
+
     fn collect_windows(&self, node: NodeId, out: &mut Vec<Window>) {
         match &self.nodes[node] {
             Some(BspNode {
@@ -171,7 +200,48 @@ impl WindowNav for BspLayout {
     }
 
     fn remove(&mut self, window: &Window) {
-        todo!()
+        let Some(leaf) = self.find_leaf(window) else {
+            return;
+        };
+
+        let Some(parent) = self.nodes[leaf].as_ref().unwrap().parent else {
+            self.free(leaf);
+            self.root = None;
+            self.focused = None;
+            return;
+        };
+
+        let (first, second) = match &self.nodes[parent] {
+            Some(BspNode {
+                kind: NodeKind::Split { first, second, .. },
+                ..
+            }) => (*first, *second),
+            _ => unreachable!("葉の親はSplitのはず"),
+        };
+        let sibling = if first == leaf { second } else { first };
+        let grandparent = self.nodes[parent].as_ref().unwrap().parent;
+
+        self.nodes[sibling].as_mut().unwrap().parent = grandparent;
+        match grandparent {
+            None => self.root = Some(sibling),
+            Some(gp) => match &mut self.nodes[gp].as_mut().unwrap().kind {
+                NodeKind::Split { first, second, .. } => {
+                    if *first == parent {
+                        *first = sibling;
+                    } else {
+                        *second = sibling;
+                    }
+                }
+                _ => unreachable!("祖父母はSplitのはず"),
+            },
+        }
+
+        self.free(leaf);
+        self.free(parent);
+
+        if self.focused == Some(leaf) {
+            self.focused = Some(self.first_leaf(sibling));
+        }
     }
 
     fn windows(&self) -> Vec<Window> {
