@@ -6,6 +6,7 @@ use smithay::{
 
 type NodeId = usize;
 
+#[derive(Clone, Copy)]
 enum Axis {
     Horizontal,
     Vertical,
@@ -145,6 +146,31 @@ impl BspLayout {
         }
     }
 
+    fn edge_leaf(&self, mut id: NodeId, dir: Direction) -> NodeId {
+        loop {
+            match &self.nodes[id].as_ref().unwrap().kind {
+                NodeKind::Split {
+                    axis, first, second, ..
+                } => {
+                    id = match (dir, axis) {
+                        (Direction::Right, Axis::Horizontal) => *first,
+                        (Direction::Left, Axis::Horizontal) => *second,
+                        (Direction::Down, Axis::Vertical) => *first,
+                        (Direction::Up, Axis::Vertical) => *second,
+                        _ => *first,
+                    };
+                }
+                _ => return id,
+            }
+        }
+    }
+
+    pub fn focus_window(&mut self, window: &Window) {
+        if let Some(leaf) = self.find_leaf(window) {
+            self.focused = Some(leaf);
+        }
+    }
+
     fn collect_windows(&self, node: NodeId, out: &mut Vec<Window>) {
         match &self.nodes[node] {
             Some(BspNode {
@@ -272,7 +298,43 @@ impl WindowNav for BspLayout {
     }
 
     fn focus(&mut self, dir: Direction) -> Option<Window> {
-        todo!()
+        let mut cur = self.focused?;
+
+        loop {
+            let parent = self.nodes[cur].as_ref().unwrap().parent?;
+
+            let(axis, first, second) = match &self.nodes[parent].as_ref().unwrap().kind {
+                NodeKind::Split {
+                    axis, first, second, ..
+                } => (*axis, *first, *second),
+                _ => unreachable!("parent is split")
+            };
+
+            let target =  match (dir, axis) {
+                (Direction::Right, Axis::Horizontal) | (Direction::Down, Axis::Vertical)
+                    if cur == first =>
+                {
+                    Some(second)
+                }
+                (Direction::Left, Axis::Horizontal) | (Direction::Up, Axis::Vertical)
+                    if cur == second =>
+                {
+                    Some(first)
+                }
+                _ => None,
+            };
+
+            if let Some(target) = target {
+                let leaf = self.edge_leaf(target, dir);
+                self.focused = Some(leaf);
+                return match &self.nodes[leaf].as_ref().unwrap().kind {
+                    NodeKind::Leaf { window } => Some(window.clone()),
+                    _ => unreachable!("edge_leaf return leaf")
+                };
+            }
+
+            cur = parent;
+        }
     }
 
     fn move_window(&mut self, dir: Direction) -> bool {

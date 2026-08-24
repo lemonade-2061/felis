@@ -11,7 +11,7 @@ use smithay::{
             Display, DisplayHandle,
         },
     },
-    utils::{Logical, Point},
+    utils::{Logical, Point, SERIAL_COUNTER},
     wayland::{
         compositor::{CompositorClientState, CompositorState},
         output::OutputManagerState,
@@ -22,11 +22,9 @@ use smithay::{
     },
 };
 
-use crate::CalloopData;
-
+use crate::layout::Direction;
 use crate::workspace::Workspace;
-
-use crate::layout::bsp::BspLayout;
+use crate::CalloopData;
 
 pub struct Felis {
     pub start_time: std::time::Instant,
@@ -148,10 +146,6 @@ impl Felis {
             return;
         };
 
-        for window in self.workspace.floating_windows() {
-            let loc = self.space.element_location(&window).unwrap_or_default();
-            self.space.map_element(window, loc, false);
-        }
         for (window, rect) in self.workspace.layout(area) {
             let toplevel = window.toplevel().unwrap();
             toplevel.with_pending_state(|state| {
@@ -159,7 +153,31 @@ impl Felis {
             });
             toplevel.send_pending_configure();
             self.space.map_element(window, rect.loc, false);
-        }   
+        }
+
+        for window in self.workspace.floating_windows() {
+            let loc = self.space.element_location(&window).unwrap_or_default();
+            self.space.map_element(window, loc, false);
+        }
+    }
+
+    pub fn focus_window(&mut self, dir: Direction) {
+        let Some(window) = self.workspace.focus(dir) else {
+            return;
+        };
+
+        let serial = SERIAL_COUNTER.next_serial();
+        let keyboard = self.seat.get_keyboard().unwrap();
+        keyboard.set_focus(
+            self,
+            Some(window.toplevel().unwrap().wl_surface().clone()),
+            serial,
+        );
+
+        for w in self.space.elements() {
+            w.set_activated(w == &window);
+            w.toplevel().unwrap().send_pending_configure();
+        }
     }
 }
 

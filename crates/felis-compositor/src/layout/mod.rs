@@ -6,6 +6,7 @@ pub mod bsp;
 pub mod floating;
 pub mod scroll;
 
+#[derive(Clone, Copy)]
 pub enum Direction {
     Left,
     Right,

@@ -27,7 +27,6 @@ use smithay::{
 use crate::{
     grabs::{MoveSurfaceGrab, ResizeSurfaceGrab},
     Felis,
-    layout::WindowNav,
 };
 
 impl XdgShellHandler for Felis {

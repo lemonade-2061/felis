@@ -3,7 +3,7 @@ use smithay::{
     utils::{Logical, Rectangle},
 };
 
-use crate::layout::{bsp::BspLayout, floating::FloatingLayout, WindowNav};
+use crate::layout::{bsp::BspLayout, floating::FloatingLayout, WindowNav, Direction};
 
 pub struct Workspace {
     tiling: BspLayout,
@@ -37,6 +37,14 @@ impl Workspace {
 
     pub fn floating_windows(&self) -> Vec<Window> {
         self.floating.windows()
+    }
+
+    pub fn focus(&mut self, dir: Direction) -> Option<Window> {
+        self.tiling.focus(dir)
+    }
+
+    pub fn set_focus(&mut self, window: &Window) {
+        self.tiling.focus_window(window);
     }
 }
 

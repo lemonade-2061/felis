@@ -1,16 +1,17 @@
 use smithay::{
     backend::input::{
         AbsolutePositionEvent, Axis, AxisSource, ButtonState, Event, InputBackend, InputEvent,
-        KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent,
+        KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent, KeyState
     },
     input::{
-        keyboard::FilterResult,
+        keyboard::{FilterResult, Keysym},
         pointer::{AxisFrame, ButtonEvent, MotionEvent},
     },
     reexports::wayland_server::protocol::wl_surface::WlSurface,
     utils::SERIAL_COUNTER,
 };
 
+use crate::layout::Direction;
 use crate::state::Felis;
 
 impl Felis {
@@ -19,15 +20,33 @@ impl Felis {
             InputEvent::Keyboard { event, .. } => {
                 let serial = SERIAL_COUNTER.next_serial();
                 let time = Event::time_msec(&event);
-
-                self.seat.get_keyboard().unwrap().input::<(), _>(
+                let press = event.state() == KeyState::Pressed;
+                let action = self.seat.get_keyboard().unwrap().input::<Direction, _>(
                     self,
                     event.key_code(),
                     event.state(),
                     serial,
                     time,
-                    |_, _, _| FilterResult::Forward,
+                    |_, modifiers, handle| {
+                        if press && modifiers.alt {
+                            let dir = match handle.modified_sym() {
+                                Keysym::h => Some(Direction::Left),
+                                Keysym::j => Some(Direction::Down),
+                                Keysym::k => Some(Direction::Up),
+                                Keysym::l => Some(Direction::Right),
+                                _ => None,
+                            };
+                            if let Some(dir) = dir {
+                                return FilterResult::Intercept(dir);
+                            }
+                        }
+                        FilterResult::Forward
+                    },
                 );
+
+                if let Some(dir) = action {
+                    self.focus_window(dir);
+                }
             }
             InputEvent::PointerMotion { .. } => {}
             InputEvent::PointerMotionAbsolute { event, .. } => {
@@ -71,6 +90,7 @@ impl Felis {
                         .map(|(w, l)| (w.clone(), l))
                     {
                         self.space.raise_element(&window, true);
+                        self.workspace.set_focus(&window);
                         keyboard.set_focus(
                             self,
                             Some(window.toplevel().unwrap().wl_surface().clone()),
