@@ -161,6 +161,12 @@ impl Felis {
         }
     }
 
+    pub fn move_window(&mut self, dir: Direction) {
+        if self.workspace.move_window(dir) {
+            self.arrange();
+        }
+    }
+
     pub fn focus_window(&mut self, dir: Direction) {
         let Some(window) = self.workspace.focus(dir) else {
             return;

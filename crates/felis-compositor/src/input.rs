@@ -14,6 +14,11 @@ use smithay::{
 use crate::layout::Direction;
 use crate::state::Felis;
 
+enum KeyAction {
+    Focus(Direction),
+    Move(Direction),
+}
+
 impl Felis {
     pub fn process_input_event<I: InputBackend>(&mut self, event: InputEvent<I>) {
         match event {
@@ -21,7 +26,7 @@ impl Felis {
                 let serial = SERIAL_COUNTER.next_serial();
                 let time = Event::time_msec(&event);
                 let press = event.state() == KeyState::Pressed;
-                let action = self.seat.get_keyboard().unwrap().input::<Direction, _>(
+                let action = self.seat.get_keyboard().unwrap().input::<KeyAction, _>(
                     self,
                     event.key_code(),
                     event.state(),
@@ -29,23 +34,30 @@ impl Felis {
                     time,
                     |_, modifiers, handle| {
                         if press && modifiers.alt {
+                            // Shift併用時はhがHになるので大文字側も拾う
                             let dir = match handle.modified_sym() {
-                                Keysym::h => Some(Direction::Left),
-                                Keysym::j => Some(Direction::Down),
-                                Keysym::k => Some(Direction::Up),
-                                Keysym::l => Some(Direction::Right),
+                                Keysym::h | Keysym::H => Some(Direction::Left),
+                                Keysym::j | Keysym::J => Some(Direction::Down),
+                                Keysym::k | Keysym::K => Some(Direction::Up),
+                                Keysym::l | Keysym::L => Some(Direction::Right),
                                 _ => None,
                             };
                             if let Some(dir) = dir {
-                                return FilterResult::Intercept(dir);
+                                return FilterResult::Intercept(if modifiers.shift {
+                                    KeyAction::Move(dir)
+                                } else {
+                                    KeyAction::Focus(dir)
+                                });
                             }
                         }
                         FilterResult::Forward
                     },
                 );
 
-                if let Some(dir) = action {
-                    self.focus_window(dir);
+                match action {
+                    Some(KeyAction::Focus(dir)) => self.focus_window(dir),
+                    Some(KeyAction::Move(dir)) => self.move_window(dir),
+                    None => {}
                 }
             }
             InputEvent::PointerMotion { .. } => {}

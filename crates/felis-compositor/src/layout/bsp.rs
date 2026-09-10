@@ -171,6 +171,56 @@ impl BspLayout {
         }
     }
 
+    /// fromの葉から見てdir方向の隣にある葉。登り(曲がれる親探し)と降り(手前の端)で決める
+    fn neighbor_leaf(&self, from: NodeId, dir: Direction) -> Option<NodeId> {
+        let mut cur = from;
+
+        loop {
+            let parent = self.nodes[cur].as_ref().unwrap().parent?;
+
+            let (axis, first, second) = match &self.nodes[parent].as_ref().unwrap().kind {
+                NodeKind::Split {
+                    axis, first, second, ..
+                } => (*axis, *first, *second),
+                _ => unreachable!("親はSplitのはず"),
+            };
+
+            let target = match (dir, axis) {
+                (Direction::Right, Axis::Horizontal) | (Direction::Down, Axis::Vertical)
+                    if cur == first =>
+                {
+                    Some(second)
+                }
+                (Direction::Left, Axis::Horizontal) | (Direction::Up, Axis::Vertical)
+                    if cur == second =>
+                {
+                    Some(first)
+                }
+                _ => None,
+            };
+
+            if let Some(target) = target {
+                return Some(self.edge_leaf(target, dir));
+            }
+
+            cur = parent;
+        }
+    }
+
+    fn leaf_window(&self, id: NodeId) -> Window {
+        match &self.nodes[id].as_ref().unwrap().kind {
+            NodeKind::Leaf { window } => window.clone(),
+            _ => unreachable!("葉のはず"),
+        }
+    }
+
+    fn set_leaf_window(&mut self, id: NodeId, new: Window) {
+        match &mut self.nodes[id].as_mut().unwrap().kind {
+            NodeKind::Leaf { window } => *window = new,
+            _ => unreachable!("葉のはず"),
+        }
+    }
+
     fn collect_windows(&self, node: NodeId, out: &mut Vec<Window>) {
         match &self.nodes[node] {
             Some(BspNode {
@@ -298,47 +348,29 @@ impl WindowNav for BspLayout {
     }
 
     fn focus(&mut self, dir: Direction) -> Option<Window> {
-        let mut cur = self.focused?;
+        let cur = self.focused?;
+        let leaf = self.neighbor_leaf(cur, dir)?;
 
-        loop {
-            let parent = self.nodes[cur].as_ref().unwrap().parent?;
-
-            let(axis, first, second) = match &self.nodes[parent].as_ref().unwrap().kind {
-                NodeKind::Split {
-                    axis, first, second, ..
-                } => (*axis, *first, *second),
-                _ => unreachable!("parent is split")
-            };
-
-            let target =  match (dir, axis) {
-                (Direction::Right, Axis::Horizontal) | (Direction::Down, Axis::Vertical)
-                    if cur == first =>
-                {
-                    Some(second)
-                }
-                (Direction::Left, Axis::Horizontal) | (Direction::Up, Axis::Vertical)
-                    if cur == second =>
-                {
-                    Some(first)
-                }
-                _ => None,
-            };
-
-            if let Some(target) = target {
-                let leaf = self.edge_leaf(target, dir);
-                self.focused = Some(leaf);
-                return match &self.nodes[leaf].as_ref().unwrap().kind {
-                    NodeKind::Leaf { window } => Some(window.clone()),
-                    _ => unreachable!("edge_leaf return leaf")
-                };
-            }
-
-            cur = parent;
-        }
+        self.focused = Some(leaf);
+        Some(self.leaf_window(leaf))
     }
 
     fn move_window(&mut self, dir: Direction) -> bool {
-        todo!()
+        let Some(cur) = self.focused else {
+            return false;
+        };
+        let Some(target) = self.neighbor_leaf(cur, dir) else {
+            return false;
+        };
+
+        let a = self.leaf_window(cur);
+        let b = self.leaf_window(target);
+        self.set_leaf_window(cur, b);
+        self.set_leaf_window(target, a);
+
+        // フォーカスは動かした窓に追従(窓はtargetの葉に移った)
+        self.focused = Some(target);
+        true
     }
 
     fn resize(&mut self, dir: Direction, delta: i32) -> bool {

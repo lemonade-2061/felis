@@ -43,6 +43,10 @@ impl Workspace {
         self.tiling.focus(dir)
     }
 
+    pub fn move_window(&mut self, dir: Direction) -> bool {
+        self.tiling.move_window(dir)
+    }
+
     pub fn set_focus(&mut self, window: &Window) {
         self.tiling.focus_window(window);
     }
