@@ -11,7 +11,7 @@ use smithay::{
             Display, DisplayHandle,
         },
     },
-    utils::{Logical, Point},
+    utils::{Logical, Point, SERIAL_COUNTER},
     wayland::{
         compositor::{CompositorClientState, CompositorState},
         output::OutputManagerState,
@@ -22,6 +22,8 @@ use smithay::{
     },
 };
 
+use crate::layout::Direction;
+use crate::workspace::Workspace;
 use crate::CalloopData;
 
 pub struct Felis {
@@ -30,6 +32,7 @@ pub struct Felis {
     pub display_handle: DisplayHandle,
 
     pub space: Space<Window>,
+    pub workspace: Workspace,
     pub loop_signal: LoopSignal,
 
     pub compositor_state: CompositorState,
@@ -84,6 +87,7 @@ impl Felis {
             data_device_state,
             popups,
             seat,
+            workspace: Workspace::new(),
         }
     }
 
@@ -132,6 +136,54 @@ impl Felis {
                     .surface_under(pos - location.to_f64(), WindowSurfaceType::ALL)
                     .map(|(s, p)| (s, (p + location).to_f64()))
             })
+    }
+
+    pub fn arrange(&mut self) {
+        let Some(output) = self.space.outputs().next().cloned() else {
+            return;
+        };
+        let Some(area) = self.space.output_geometry(&output) else {
+            return;
+        };
+
+        for (window, rect) in self.workspace.layout(area) {
+            let toplevel = window.toplevel().unwrap();
+            toplevel.with_pending_state(|state| {
+                state.size = Some(rect.size);
+            });
+            toplevel.send_pending_configure();
+            self.space.map_element(window, rect.loc, false);
+        }
+
+        for window in self.workspace.floating_windows() {
+            let loc = self.space.element_location(&window).unwrap_or_default();
+            self.space.map_element(window, loc, false);
+        }
+    }
+
+    pub fn move_window(&mut self, dir: Direction) {
+        if self.workspace.move_window(dir) {
+            self.arrange();
+        }
+    }
+
+    pub fn focus_window(&mut self, dir: Direction) {
+        let Some(window) = self.workspace.focus(dir) else {
+            return;
+        };
+
+        let serial = SERIAL_COUNTER.next_serial();
+        let keyboard = self.seat.get_keyboard().unwrap();
+        keyboard.set_focus(
+            self,
+            Some(window.toplevel().unwrap().wl_surface().clone()),
+            serial,
+        );
+
+        for w in self.space.elements() {
+            w.set_activated(w == &window);
+            w.toplevel().unwrap().send_pending_configure();
+        }
     }
 }
 

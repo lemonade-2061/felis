@@ -36,7 +36,8 @@ impl XdgShellHandler for Felis {
 
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
         let window = Window::new_wayland_window(surface);
-        self.space.map_element(window, (0, 0), false);
+        self.workspace.add_tiled(window);
+        self.arrange();
     }
 
     fn new_popup(&mut self, surface: PopupSurface, _positioner: PositionerState) {
@@ -127,6 +128,20 @@ impl XdgShellHandler for Felis {
 
     fn grab(&mut self, _surface: PopupSurface, _seat: wl_seat::WlSeat, _serial: Serial) {
         // TODO popup grabs
+    }
+    fn toplevel_destroyed(&mut self, surface: ToplevelSurface) {
+        let window= self
+            .space
+            .elements()
+            .find(|w| w.toplevel().unwrap().wl_surface() == surface.wl_surface())
+            .cloned();
+
+        if let Some(window) = window {
+            self.workspace.remove(&window);
+            self.space.unmap_elem(&window);
+        }
+
+        self.arrange();
     }
 }
 delegate_xdg_shell!(Felis);
