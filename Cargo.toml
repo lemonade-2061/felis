@@ -1,10 +1,13 @@
-[workspace]
-members = ["crates/felis-compositor"]
-resolver = "2"
+[package]
+name = "felis-compositor"
+version = "0.1.0"
+edition = "2024"
 
-[workspace.dependencies]
-iced   = { version = "0.14.0", features = ["image", "canvas"] }
-zbus   = "5"
-serde  = { version = "1", features = ["derive"] }
-tokio  = { version = "1", features = ["full"] }
-dirs   = "5"
+[dependencies]
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+bitflags = "2.11.1"
+smithay = { version = "0.7.0", default-features = false, features = [
+  "backend_winit",
+  "wayland_frontend",
+  "desktop",
+] }

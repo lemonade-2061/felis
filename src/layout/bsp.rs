@@ -150,7 +150,10 @@ impl BspLayout {
         loop {
             match &self.nodes[id].as_ref().unwrap().kind {
                 NodeKind::Split {
-                    axis, first, second, ..
+                    axis,
+                    first,
+                    second,
+                    ..
                 } => {
                     id = match (dir, axis) {
                         (Direction::Right, Axis::Horizontal) => *first,
@@ -171,7 +174,6 @@ impl BspLayout {
         }
     }
 
-    /// fromの葉から見てdir方向の隣にある葉。登り(曲がれる親探し)と降り(手前の端)で決める
     fn neighbor_leaf(&self, from: NodeId, dir: Direction) -> Option<NodeId> {
         let mut cur = from;
 
@@ -180,9 +182,12 @@ impl BspLayout {
 
             let (axis, first, second) = match &self.nodes[parent].as_ref().unwrap().kind {
                 NodeKind::Split {
-                    axis, first, second, ..
+                    axis,
+                    first,
+                    second,
+                    ..
                 } => (*axis, *first, *second),
-                _ => unreachable!("親はSplitのはず"),
+                _ => unreachable!("Split"),
             };
 
             let target = match (dir, axis) {
@@ -210,14 +215,14 @@ impl BspLayout {
     fn leaf_window(&self, id: NodeId) -> Window {
         match &self.nodes[id].as_ref().unwrap().kind {
             NodeKind::Leaf { window } => window.clone(),
-            _ => unreachable!("葉のはず"),
+            _ => unreachable!("leaf"),
         }
     }
 
     fn set_leaf_window(&mut self, id: NodeId, new: Window) {
         match &mut self.nodes[id].as_mut().unwrap().kind {
             NodeKind::Leaf { window } => *window = new,
-            _ => unreachable!("葉のはず"),
+            _ => unreachable!("leaf"),
         }
     }
 
@@ -255,7 +260,7 @@ impl WindowNav for BspLayout {
                         kind: NodeKind::Leaf { window },
                         ..
                     }) => window.clone(),
-                    _ => unreachable!("focusedは葉のはず"),
+                    _ => unreachable!("focused"),
                 };
 
                 let axis = match self.nodes[target].as_ref().unwrap().parent {
@@ -303,7 +308,7 @@ impl WindowNav for BspLayout {
                 kind: NodeKind::Split { first, second, .. },
                 ..
             }) => (*first, *second),
-            _ => unreachable!("葉の親はSplitのはず"),
+            _ => unreachable!("Split"),
         };
         let sibling = if first == leaf { second } else { first };
         let grandparent = self.nodes[parent].as_ref().unwrap().parent;
@@ -319,7 +324,7 @@ impl WindowNav for BspLayout {
                         *second = sibling;
                     }
                 }
-                _ => unreachable!("祖父母はSplitのはず"),
+                _ => unreachable!("Split"),
             },
         }
 
@@ -368,7 +373,6 @@ impl WindowNav for BspLayout {
         self.set_leaf_window(cur, b);
         self.set_leaf_window(target, a);
 
-        // フォーカスは動かした窓に追従(窓はtargetの葉に移った)
         self.focused = Some(target);
         true
     }
